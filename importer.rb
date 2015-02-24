@@ -21,7 +21,7 @@ class Importer
       @total_rows_imported += RowGroupSize
       import_row_group(@rows)
       @rows = []
-      #puts "imported #{@total_rows_imported}"
+      # puts "imported #{@total_rows_imported}"
     end
   end
 
@@ -29,18 +29,18 @@ class Importer
     # Using predetermined field order.  Structs will also work here.
     if @input_records_type == :array
       @model.import(@fields, @rows, validate: @validate)
-    else      
+    else
       # Here the order of fields was not known in advance
       # puts "Data looks like: " + rows.first.inspect
       #    $log.info("Data looks like #{rows.first.inspect}")
       if rows.first.respond_to?(:keys)
         @model.import(@rows.map { |r| @model.new(r) }, validate: @validate)
       else if  rows.first.respond_to?(:members)
-      
-      fields =  @rows[1].members.map{|s| s.to_s}      
-        @model.import(fields,@rows.map{|r| r.to_a},:validate=>false)
-        else
-          raise "Record is an unhandled type #{rows.first.class}"
+
+             fields =  @rows[1].members.map(&:to_s)
+             @model.import(fields, @rows.map(&:to_a), validate: false)
+           else
+             fail "Record is an unhandled type #{rows.first.class}"
           end
         end
     end
