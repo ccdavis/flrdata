@@ -7,7 +7,12 @@ require 'person'
 require 'schema'
 require 'extract_layout'
 
-require 'activerecord-jdbcsqlite3-adapter'
+if defined?(JRUBY_VERSION)
+	require 'activerecord-jdbcsqlite3-adapter'
+else
+	require 'sqlite3'
+end
+
 require 'importer'
 require 'hflr'
 
