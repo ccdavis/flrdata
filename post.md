@@ -183,7 +183,12 @@ Looking at the ratio of rented to owned family households, there's a trend but n
 add in the home value for fun. If we want correct values we need to produce our own average, because we need to take the household weights into account. Note that the OWNERSHIP=2 
 rows have home values of 9999999.0. That's due to the rented householders not being asked their home's value.
 
-
+	sqlite> select acsyr, ownershp, sum(hhwt/100), 
+  	round(sum(valueh * (hhwt/100))/sum(hhwt/100))  
+	  from households 
+	  where  hhtype >= 1 and hhtype <=7 and metarea = 620     	
+  	group by acsyr, ownershp;
+  	
 
 ```
 2003|1|936228|183379.0
@@ -204,7 +209,12 @@ rows have home values of 9999999.0. That's due to the rented householders not be
 2011|2|538063|9999999.0
 ```
 
+Now that's interesting. 
+
 There's a lot more to uncover in this dataset. For example one might hypothesize that home equity loans drove the swing in home values. WE could look at only those households with second mortgages (variable MORT2.) 
-Another trend noticed in some regions was the over-representation of  minorities and recent immigrants in foreclosures. We can't study foreclosures directly with this dataset, but we could look at second mortgages, home values, ethnicity, income and other variables to learn more.
+Another trend noticed in some regions was the over-representation of  minorities and recent immigrants in foreclosures. We can't study foreclosures directly with this dataset, but we could look at second mortgages, home values, ethnicity, income and other variables to learn more.  To study this last question you'd need to join the people and households tables.
+
+
+
 
 
