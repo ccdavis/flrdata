@@ -16,14 +16,15 @@ end
 require 'importer'
 require 'hflr'
 
-# Connect to the database, and drop people and households tables if they exist.
-# Then create the tables with the current schema found in 'schema.rb'
-def create_database
-  ActiveRecord::Base.establish_connection(
+
+def connect_to_database
+ActiveRecord::Base.establish_connection(
     adapter: 'sqlite3',
     database: 'database.sqlite3'
   )
+end
 
+def create_schema
   CreatePerson.up
   CreateHousehold.up
 end
@@ -33,6 +34,7 @@ def default_data_to_import
 end
 
 def import(data_filename)
+
   puts "Importing data from #{data_filename}"
   household_importer = Importer.new(Household, false)
   person_importer = Importer.new(Person, false)
@@ -62,11 +64,13 @@ def import(data_filename)
   person_importer.close
 end
 
-def main
+def run_import
+connect_to_database
+create_schema
   data_to_import = ARGV.size > 0 ? ARGV[0] : default_data_to_import
 
   create_database
   import(data_to_import)
 end
 
-main
+
