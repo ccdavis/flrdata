@@ -145,74 +145,54 @@ So, to see how many people  the U.S. Census estimated were in the country in 201
 
 With that in mind we can look at a simple but (possibly) revealing statistic, the number of households owned and the number of family (HHTYPE 1..7) households rented by year, OWNERSHP 1 = owned, 2 = rented:
 
-	sqlite> select acsyr, ownershp, sum(hhwt/100) 
+	sqlite> 
+	>select acsyr, ownershp, sum(hhwt/100) 
 	>from households 
 	>where  hhtype between 1 and 7 
 	>group by acsyr, ownershp;
 
-```
-2001|1|69986392
-2001|2|36449626
-2002|1|71308121
-2002|2|36066963
-2003|1|72423984
-2003|2|36004362
-2004|1|73752623
-2004|2|36152252
-2005|1|74292694
-2005|2|36776465
-2006|1|75074799
-2006|2|36542589
-2007|1|75511557
-2007|2|36866406
-2008|1|75341616
-2008|2|37759745
-2009|1|74929333
-2009|2|38686859
-2010|1|74947705
-2010|2|39619744
-2011|1|74376307
-2011|2|40615408
-2012|1|74227189
-2012|2|41742391
-2013|1|73933462
-2013|2|42357512
+This produces a simple set of results for each year in our data extract counting rented and owned households. The table is rather narrow and tall; for easier reading we might like to pivot  the table. Sqlite doesn't have a pivot function but we can do it in Ruby easily enough:
+
+```ruby
+chart_data =ActiveRecord::Base.connection.select_all("
+select acsyr, ownershp, sum(hhwt/100) 
+	from households 
+	where  hhtype between 1 and 7 
+	group by acsyr, ownershp"
+  	))
+  	
+def pivot(results)
+    (0..results.columns.size-1).map{|column_number|
+	results.rows.map{|r| r[column_number]}}
+end
+
+pivot(chart_data)
 ```
 
-Looking at the ratio of rented to owned family households, there's a trend but not, perhaps, as large as one mighgt expect. Let's focus on a particular metro area that got hit hard in the housing bubble. We can select Phoenix (METAREA = 620). Also, let's
-add in the home value for fun. If we want correct values we need to produce our own average, because we need to take the household weights into account. Note that the OWNERSHIP=2 
+
+
+
+Looking at the ratio of rented to owned family households, there's a trend but not, perhaps, as large as one might expect. Let's focus on a particular metro area that got hit hard in the housing bubble. We can select Phoenix (METAREA = 620). Also, let's
+add in the home value for fun. If we want correct values we need to produce our own average, because we need to take the household weights into account. Note that the OWNERSHIP=2  (rented) 
 rows have home values of 9999999.0. That's due to the rented householders not being asked their home's value.
-
-	sqlite> select acsyr, ownershp, sum(hhwt/100), 
-  	round(sum(valueh * (hhwt/100))/sum(hhwt/100))  
-	  from households 
-	  where  hhtype >= 1 and hhtype <=7 and metarea = 620     	
-  	group by acsyr, ownershp;
   	
 
+```ruby
+chart = pivot(ActiveRecord::Base.connection.select_all("
+	select acsyr, ownershp, sum(hhwt/100) as nhouseholds, 
+  	round(sum(valueh * (hhwt/100))/sum(hhwt/100))   as homevalue
+	  from households 
+	  where  hhtype >= 1 and hhtype <=7 and metarea = 620     	
+  	group by acsyr, ownershp"
+  	))
+
 ```
-2003|1|936228|183379.0
-2003|2|431591|9999999.0
-2005|1|893493|274602.0
-2005|2|431133|9999999.0
-2006|1|897636|336231.0
-2006|2|424467|9999999.0
-2007|1|911525|335810.0
-2007|2|427029|9999999.0
-2008|1|916246|327286.0
-2008|2|428353|9999999.0
-2009|1|887680|266116.0
-2009|2|471483|9999999.0
-2010|1|873002|242128.0
-2010|2|511358|9999999.0
-2011|1|869095|217803.0
-2011|2|538063|9999999.0
-```
+
 
 Now that's interesting. 
 
 There's a lot more to uncover in this dataset. For example one might hypothesize that home equity loans drove the swing in home values. WE could look at only those households with second mortgages (variable MORT2.) 
-Another trend noticed in some regions was the over-representation of  minorities and recent immigrants in foreclosures. We can't study foreclosures directly with this dataset, but we could look at second mortgages, home values, ethnicity, income and other variables to learn more.  To study this last question you'd need to join the people and households tables.
+Another trend noticed in some regions was the over-representation of  minorities and recent immigrants in foreclosures. We can't study foreclosures directly with this dataset, but we could look at second mortgages, home values, ethnicity, income and other variables to learn more.  To study this last question you'd need to join the people and households tables, in order to associate characteristics of the head of the household  with the household information we've already used.
 
 
 
