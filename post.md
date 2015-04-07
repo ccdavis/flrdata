@@ -10,7 +10,6 @@ share: true
 ---
 
 
-	
 
 Last time I discussed the FLR format and showed how  to use the 'hflr' gem to read in FLR format and produce Ruby structs.
 
@@ -21,15 +20,13 @@ In this post I'll demonstrate how to combine 'hflr' with a simple importer class
 one could simply write code such as the following to import small numbers of records into a database:
 
 ```ruby
-
-flr_file.each_record do |record|
-  customer = Customer.new
-  customer.name = record.name
-  customer.street = record.street
-  customer.zip = record.zip
-  customer.save
-  
-end
+	flr_file.each_record do |record|
+  	  customer = Customer.new
+  	  customer.name = record.name
+  	  customer.street = record.street
+	  customer.zip = record.zip
+	  customer.save  
+	end
 ```
 
 However, performance will degrade unacceptably as the size of the import grows to a few thousand records.
@@ -39,21 +36,20 @@ What's needed is a way to avoid:  (1) Instantiating all records as ActiveRecord 
 Using activerecord -import, Your code would look like
 
 ```ruby
-
-  records_to_import = []
-  batch_size = 20_000 # arbitrary but reasonable batch size
-  fields = [:name, :street, :zip]
+	  records_to_import = []
+	  batch_size = 20_000 # arbitrary but reasonable batch size
+	  fields = [:name, :street, :zip]
   
-   flr_file.each_record do |record|
-     records_to_import << record.to_a
-     if records_to_import % batch_size == 0
-       Customer.import(records_to_import,fields)
-       records_to_import = []
-     end
-   end
+	   flr_file.each_record do |record|
+	     records_to_import << record.to_a
+	     if records_to_import % batch_size == 0
+	       Customer.import(records_to_import,fields)
+	       records_to_import = []
+	     end
+	   end
    
-   # Import the remaining records % batch_size
-   Customer.import(records_to_import,fields)
+	   # Import the remaining records % batch_size
+	   Customer.import(records_to_import,fields)
 
 ```
 
@@ -75,8 +71,7 @@ The 'codebook.txt' and 'usa_0001.sps' files were created by the data extract sys
 
 To figure out what to pass to the FLRFile class initializer, you'd look at the code book or possibly the SPSS file supplied with the dataset:
 
-```
-
+```text
 record type "H".
 data list /
   RECTYPE    1-1 (a)
@@ -144,7 +139,11 @@ This is fairly convenient, and if you regularly needed to        import IPUMS da
 
 In our example, we're loading data into a database, so we need to define database tables with corresponding columns. See the 'schema.rb' for the translation of the above SPSS code into an Active Record migration script like one found in a Rails project. Again, you'd probably write a migration generator script  if importing extracts was a frequent task.
 
-To see the HFLR layout data, look in 'extract_layout.rb'.
+As you can see from the 'schema.rb' migrations we're making two tables, corresponding to the two record types in the data file 'usa_00001.dat': Household and person. We'll use Rails conventions and call these tables 'households' and 'people'. 
+
+Since the data come with keys to link the two tables together, we'll make sure to index the two columns holding those keys. The 'households' table has a column 'serial' which will get the value of the SERIAL variable -- it's a unique household serial number. Within one dataset SERIAL is unique; since we're extracting data across thirteen datasets, we'll need to use 'ACSYR (the year) to differentiate records. The 'people' table has  a 'serialp' column that will hold the SERIALP variable; SERIALP has the value of the household serial number for the household the person record belongs to. Again, we'd need the ACSYR (which is on the people table as well) to differentiate between  datasets within the 'people' table. The tables already have the Rails standard 'id' columns as unique keys. A nice feature for the importer would be to add a 'household_id' column to the people table and copy the value of 'id' from the correct household record, so we wouldn't need to use composite keys in our joins. (I've done this in production code but it's rather specialized and gets in the way of the example code.)
+
+To read the data we use the 'hflr' gem as in the above example code and in the previous post. We need to provide a layout to 'hflr'. To see the HFLR layout data, look in 'extract_layout.rb'. 
 
 To run the example, just do
 	
@@ -158,12 +157,16 @@ Once the import has finished we should do a few simple queries to verify that al
 
 So, to see how many people  the U.S. Census estimated were in the country in 2013, you would do:
 
+```sql
 	sqlite> select sum(PERWT/100) from people where  acsyr =2013;	
 	316128839
 	sqlite>
+```
+
 
 And we can check the population growth
-```
+
+```sql
 	sqlite> select sum(perwt/100), acsyr from people group by acsyr;
 	277075792|2001
 	280717370|2002
@@ -184,7 +187,7 @@ And we can check the population growth
 
 From this result we know that not only were the right number  of person records imported but they were records with correct weights, indicating that the data in those records is probably all correct. Of course we'd have to check every column to be absolutely sure. As a final check we can join the people with their household data to get geography and housing information for the state of Arizona (STATEICP=61) for every  year in the data. The OWNERSHP variable will distinguish between people living in rented households (2) and owner occupied (1). OWNERSHP=0 is for other living situations like prisons, military bases, dormitories, etc.
 
-```
+```sql
 	sqlite> select people.acsyr,ownershp,sum(perwt/100) 
 	>from households,people 
 	>where people.serialp=households.serial and stateicp=61 and people.acsyr=households.acsyr 
