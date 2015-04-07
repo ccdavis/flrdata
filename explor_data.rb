@@ -1,6 +1,8 @@
-require './import.rb'
-require 'builder'
+require './import_helpers.rb'
 
+# Warning! This code won't work with only the included  data in input_data/usa_0001.dat. 
+#You need the full version of the data, which you can get from the
+# www.ipums.org USA data extraction service.
 
 connect_to_database
 
