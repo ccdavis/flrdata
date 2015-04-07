@@ -108,8 +108,10 @@ connect_to_database
 create_schema
   data_to_import = ARGV.size > 0 ? ARGV[0] : default_data_to_import
 
-  create_database
+  
   import(data_to_import)
 end
+
+
 
 
