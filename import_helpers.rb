@@ -8,16 +8,14 @@ require 'person'
 require 'schema'
 require 'extract_layout'
 
-
 if defined?(JRUBY_VERSION)
-	require 'activerecord-jdbcsqlite3-adapter'
+  require 'activerecord-jdbcsqlite3-adapter'
 else
-	require 'sqlite3'
+  require 'sqlite3'
 end
 
 require 'importer'
 require 'hflr'
-
 
 def connect_to_database
   ActiveRecord::Base.establish_connection(
@@ -28,38 +26,36 @@ end
 
 # Take a result set from ActiveRecord::Base.connection.select_all()
 def pivot(results)
-    (0..results.columns.size-1).map{|column_number|
-	results.rows.map{|r| r[column_number]}}
+  (0..results.columns.size - 1).map{|column_number|
+    results.rows.map { |r| r[column_number] }
+  }
 end
-
 
 def pivot_named_fields(results)
   # Get 'row names' from the column names
   names = results.columns
   pivoted_table = pivot(results)
-  table_with_row_names = (0..pivoted_table.size-1).map{|row_number| 
+  table_with_row_names = (0..pivoted_table.size - 1).map{|row_number|
     [names[row_number]] + pivoted_table[row_number]
   }
 end
 
-
 def html_table(data)
-  xm = Builder::XmlMarkup.new(:indent => 2)
-    xm.table {
-    xm.tr { data[0].keys.each { |key| xm.th(key)}}
-    data.each { |row| xm.tr { row.values.each { |value| xm.td(value)}}}
-     }
+  xm = Builder::XmlMarkup.new(indent: 2)
+  xm.table {
+    xm.tr { data[0].keys.each { |key| xm.th(key) } }
+    data.each { |row| xm.tr { row.values.each { |value| xm.td(value) } } }
+  }
   xm
 end
 
-
 def pivoted_html_table(data)
   data = pivot_named_fields(data)
-  xm = Builder::XmlMarkup.new(:indent => 2)
-    xm.table {
-    xm.tr { data[0].each { |value| xm.th(value)}}
-    (1..data.size-1).map { |row_number| xm.tr { data[row_number].each { |value| xm.td(value)}}}
-     }
+  xm = Builder::XmlMarkup.new(indent: 2)
+  xm.table {
+    xm.tr { data[0].each { |value| xm.th(value) } }
+    (1..data.size - 1).map { |row_number| xm.tr { data[row_number].each { |value| xm.td(value) } } }
+  }
   xm
 end
 
@@ -73,7 +69,6 @@ def default_data_to_import
 end
 
 def import(data_filename)
-
   puts "Importing data from #{data_filename}"
   household_importer = Importer.new(Household, false)
   person_importer = Importer.new(Person, false)
@@ -104,14 +99,9 @@ def import(data_filename)
 end
 
 def run_import
-connect_to_database
-create_schema
+  connect_to_database
+  create_schema
   data_to_import = ARGV.size > 0 ? ARGV[0] : default_data_to_import
 
-  
   import(data_to_import)
 end
-
-
-
-

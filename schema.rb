@@ -22,8 +22,8 @@ class CreatePerson < ActiveRecord::Migration
       t.integer :line_number
       t.string :record_type
     end
-    
-    add_index :people,:serialp
+
+    add_index :people, :serialp
   end
 end
 
@@ -60,6 +60,6 @@ class CreateHousehold < ActiveRecord::Migration
       t.integer :line_number
       t.string :record_type
     end
-    add_index :households,:serial
+    add_index :households, :serial
   end
 end
